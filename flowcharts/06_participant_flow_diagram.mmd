@@ -1,0 +1,20 @@
+flowchart TD
+    %% UPSTREAM NODES -- FILL IN FROM PUBLISHED CLOVERS PROTOCOL/RESULTS
+    A[Patients screened<br/>n = ???]
+    A --> B[Excluded pre-randomization<br/>n = ???<br/>Reasons: ???]
+    A --> C[Randomized<br/>n = ???]
+
+    %% DOWNSTREAM FROM THE ANALYTIC COHORT FILES -- REAL NUMBERS BELOW
+    C --> D[Analytic cohort<br/>n = 1563<br/>Restrictive fluid: 782, Liberal fluid: 781<br/>Events: 225]
+    D --> E[Excluded for no baseline biomarker draw<br/>n = 223]
+    D --> F[Biomarker analytic cohort<br/>n = 1340<br/>Restrictive fluid: 672 ,Liberal fluid: 668<br/>Events: 186]
+    F --> G[Derivation set<br/>n = 670<br/>Restrictive: 336 , Liberal: 334]
+    F --> H[Validation set<br/>n = 670<br/>Restrictive: 336 , Liberal: 334]
+    G --> I[Imputation fit on derivation,<br/>applied to validation]
+    H --> I
+    I --> J[CATE modeling<br/>Pass 1: clinical covariates only<br/>Pass 2: clinical + biomarker]
+
+    %% styling -- placeholder nodes shown in red so they're hard to miss
+    style A fill:#fee,stroke:#c00
+    style B fill:#fee,stroke:#c00
+    style C fill:#fee,stroke:#c00

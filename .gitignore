@@ -1,0 +1,36 @@
+cat > .gitignore << 'EOF'
+# Data — NEVER commit
+data/
+*.csv
+*.xlsx
+*.RDS
+*.rds
+
+# Outputs (large, regeneratable, may contain PHI-derived summaries)
+outputs/
+
+# R / environment
+.Rhistory
+.RData
+.Ruserdata
+renv/library/
+renv/local/
+renv/cellar/
+renv/lock/
+renv/staging/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.uv/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.Rproj.user/
+.vscode/
+.idea/
+EOF
