@@ -13,48 +13,99 @@ extending it to incorporate 8 plasma biomarkers (IL-1, Angiopoietin-1/2,
 TNFR-1, IL-6, sTREM-1, KIM-1, sRAGE) measured at trial baseline.
 
 ---
+## Average treatment effects may mask true treatment differences
 
-## Central aims
+The CLOVERS trial (Shapiro et al., NEJM 2023) randomized 1,563 patients with sepsis-induced hypotension to either a restrictive fluid strategy (prioritize early vasopressors) or a liberal fluid strategy (prioritize crystalloid boluses).
 
-1. **Aim 1 (descriptive).** Characterize baseline clinical and biomarker
-   profiles of CLOVERS patients with available baseline (V1) biomarker draws,
-   compared to the full CLOVERS cohort.
+Although the primary result was null: no statistically significant difference in 90-day in-hospital mortality between the two treatment across the full trial population, there was a more nuanced finding. 
 
-2. **Aim 2 (HTE detection — the headline question).** Determine whether
-   adding plasma biomarkers to a clinical-covariate-based heterogeneous
-   treatment effect (HTE) model meaningfully improves detection of HTE,
-   versus a model using clinical covariates alone.
+A null average treatment effect (ATE) does NOT mean the treatment had no effect on anyone. It means the average effect across all patients was approximately zero. 
 
-3. **Aim 3 (subgroup characterization).** If Aim 2 is positive, characterize
-   the patient subgroup identified by the biomarker-augmented model as
-   benefiting more (or less) from the experimental treatment arm, in
-   clinical terms.
+This average can hide real heterogeneity: some patients could have benefited from the liberal strategy, while others were actually adversed affected by it.
+
+These competing effects may be masked when aggregated. 
+
+Thus, this is the primary aim of this analysis: to explore the implications of heterogeneous treatment effects (HTE). 
+
+Specifically, we wish to examined individualized absolute risk difference (iARD). For each patient, the iARD is the difference between their probability of the outcome (90-day in-hospital mortality) under treatment A versus treatment B. 
+
+In a trial with a binary outcome, a patient's iARD represents how much their personal risk changes depending on which treatment they receive. The ATE reported in the CLOVERS paper is simply the average of all patients' iARDs. When the ATE is null, the question becomes: are the individual iARDs also all near zero (true homogeneity), or do some patients have strongly positive iARDs and others strongly negative iARDs that average to zero (hidden heterogeneity)?
+
+ Data-driven methods for estimating individual-level treatment effects such as conditional average treatment effects (CATEs) address limitations by using the full covariate profile of each patient to estimate their personal iARD, without pre-specifying which covariates drive the heterogeneity.
+
+For context, Kiernan et al. (AJRCCM 2025) demonstrated that this hidden heterogeneity exists in CLOVERS. Using latent class analysis (LCA) with 3 plasma biomarkers (angiopoietin-1, angiopoietin-2, and sTNFR-1), they classified 1,289 patients into two molecular subphenotypes (SP1 and SP2). SP2 patients, characterized by markers of endothelial injury and inflammation, had significantly higher 28-day mortality with the liberal fluid strategy compared to the restrictive strategy (41% vs 27%), while SP1 patients showed no difference (9% vs 9%). The interaction p-value was 0.02.
+
+The pipeline in this repository is looking at the next step which is if CATE methods detect heterogeneity without pre-specifying subphenotypes. It also takes a look at MORE biomarkers (expanding from the original 3 markers to 8 markers). How do these additions improve the detection of the individualized differences in critically ill patients? 
 
 ---
 
+## This pipeline's cohort 
+Our analytic cohort (n=1,340) is defined as CLOVERS patients with any Visit 1 biomarker draw. 
+
+This differs from Kiernan et al.'s cohort (n=1,289), which required complete measurements of all three LCA biomarkers (Ang-1, Ang-2, sTNFR-1) plus serum creatinine. Our broader inclusion is defensible because causal forest methods can handle missing individual biomarkers via imputation, whereas LCA requires all clustering variables to be complete.
+
+From 1,563 randomized → 223 excluded (no V1 biomarker) → 1,340 analytic cohort (672 restrictive / 668 liberal so 186 events).
+
+---
+# Glossary
+
+ATE (Average Treatment Effect): The mean difference in outcome between treatment arms across the entire study population. A null ATE does not rule out real heterogeneity.
+
+HTE (Heterogeneous Treatment Effects): Non-random, explainable variability in the magnitude or direction of treatment effects across individuals within a population.
+
+iARD (individualized Absolute Risk Difference): The estimated difference in outcome probability for a specific patient under treatment A versus treatment B. The ATE is the average of all patients' iARDs.
+
+CATE (Conditional Average Treatment Effect): The expected treatment effect for patients with a given set of covariate values. CATE models estimate iARDs using each patient's full baseline profile — demographics, labs, vitals, comorbidities, and (in this project) biomarkers.
+
+TOC (Targeting Operator Characteristic): A curve that plots the observed absolute risk difference as a function of the proportion of the population treated, starting from those predicted to benefit most. If a CATE model has detected real heterogeneity, the curve will separate from the ATE line.
+
+AUTOC (Area Under the TOC Curve): Summary metric for how well a CATE model separates patients with different treatment effects. Higher AUTOC = more detected heterogeneity.
+
+AUQINI (Area Under the Qini Curve): A linear-weighted version of AUTOC; emphasizes separation across the full score distribution.
+
+Kendall's tau: Rank correlation between the CATE model's predicted treatment effect ordering and the observed ordering. Values near 1 mean the model correctly ranks who benefits most.
+
+AUC (Area Under the ROC Curve): In the risk-modeling stage, measures how well a baseline risk model discriminates patients who will have the outcome from those who will not. AUC 0.5 = chance; AUC 1.0 = perfect discrimination.
+
+LCA (Latent Class Analysis): An unsupervised clustering method that assigns patients to latent subgroups based on observed variables. Used by Kiernan et al. (2025) to define SP1/SP2 subphenotypes. Unlike CATE, LCA requires pre-specifying which variables define the clusters and produces hard (not continuous) assignments.
+
+Causal forest: A random-forest-based method that estimates CATEs by adaptively splitting on covariates to find regions of differing treatment effects. The primary CATE method in this analysis.
+
+BCF (Bayesian Causal Forest): Bayesian nonparametric CATE method that separately models baseline risk and the treatment effect modifier, using BART priors.
+
+BART: A Bayesian nonparametric regression method that sums many small decision trees, each regularized by a prior. Used here both as a risk model (bart.risk) and as a CATE S-learner (pbart.slearn.CATE).
+
+missForest:  A random-forest-based imputation method that iteratively predicts each missing variable using all other variables. Used here with a custom implementation that allows training on one dataset and applying to another.
+
+
+
 ## Background / literature
 
-Please see attached relevant literature folder. Reference the iARD and HTE work completed by Dr. Victor Talisa and Dr. Faraaz Shah. 
+Please reference the iARD and HTE work completed by Dr. Victor Talisa and Dr. Faraaz Shah. 
 
-  - The original CLOVERS trial paper (Shapiro NI et al., NEJM 2023): aim,
-    primary result, lack of treatment effect on the overall cohort.
+Papers referenced for this pipeline include the titles: 
+- Early Restrictive or Liberal Fluid Management for Sepsis-Induced Hypotension
 
-  - The CLOVERS protocol and biomarker substudy protocol if separately
-    published, for the rationale behind which biomarkers were drawn.
+- Early Restrictive Versus Liberal Fluid Management for Sepsis-induced HypotensionOnline Supplement 
+
+- Molecular Phenotyping of Sepsis and Differential Responseto Fluid Resuscitation (Elizabeth Kiernan et al)
+
+  - The original CLOVERS trial paper (Shapiro NI et al., NEJM 2023)
 
   - Prior HTE work in sepsis using causal forests / similar methods
-    (e.g., Seymour et al. JAMA 2019 phenotypes, Sinha et al. clustering
-    work, Wong et al. PERSEVERE).
+    (e.g., Seymour et al. JAMA 2019  Sinha et al.
+    work, Wong et al.).
 
-  - Methodological references for the CATE estimators used here: Athey &
-    Wager 2018 (grf), Hahn et al. 2020 (bcf), Tian et al. 2014 (modified
-    covariate), and the AUTOC/AUQINI metrics from Yadlowsky et al. 2021.
 
-  - The published ADRENAL HTE analysis (V. Talisa) 
+  - Published ADRENAL HTE analysis (V. Talisa) 
 
 ---
 
 ## What was done, and what was changed from the ADRENAL pipeline
+This pipeline was built to mirror the HTE analysis that Dr. Victor Talisa developed for the ADRENAL trial. 
+
+Victor's framework is a five-stage pipeline for discovering and evaluating heterogeneous treatment effects in randomized trial data. The shared codebase can be found in 
+/ cate-repo/ (CATE-derivation-and-evaluation-main) and consists of 9 R scripts. 
 
 This pipeline follows the same five-stage structure as the ADRENAL HTE
 analysis but adapts each stage to CLOVERS data and adds biomarker handling.
@@ -131,16 +182,17 @@ Detailed variable-source mapping in `outputs/02b_build_variable_source_table/`.
 
 ### Missing data handling
 
-Missing covariates are imputed via missForest (Stekhoven & Bühlmann 2012)
-using the `missforest_train.R` implementation from the shared CATE repo.
-Imputation forests are fit on the derivation set only; the same fitted
+Missing covariates are imputed via missForest using the `missforest_train.R` implementation from the shared CATE repo.
+Imputation forests are fit on the derivation set only. So, the same fitted
 forests are applied to the validation set, preventing leakage of validation
 information.
 
 ### Derivation / validation split
 
 A 50/50 random split, stratified by treatment arm (`w`), with a fixed
-random seed (`set.seed(03202026)`) for reproducibility. Yields 670/670
+random seed (`set.seed(03202026)`) for reproducibility. Y
+
+ields 670/670
 patients. Statistical equivalence of the two halves on every covariate
 is verified in `outputs/03b_compare_der_val/`.
 
@@ -183,11 +235,163 @@ adjusted AUQINI metrics. The full comparison is run twice — once with
 clinical covariates only, once with clinical + 8 biomarker covariates —
 producing a side-by-side AUTOC table that is the project's primary result.
 
+
+### Results 
+
+---
+
+## Results
+
+### Risk modeling (stage 4)
+
+Five baseline risk-prediction methods were compared on the derivation set
+using 50-fold cross-validation, fitting on control-arm patients only.
+
+| Method | Mean AUC | SD | Median AUC |
+|---|---|---|---|
+| Elastic net (alpha=0.5) | 0.862 | 0.017 | 0.864 |
+| Random forest (randomForest) | 0.860 | 0.015 | 0.861 |
+| BART (stochtree) | 0.855 | 0.020 | 0.856 |
+| Random forest (grf) | 0.851 | 0.018 | 0.851 |
+| Logistic regression | 0.815 | 0.026 | 0.816 |
+
+The top four methods are essentially tied (AUC 0.851–0.862). Logistic
+regression is clearly worst but still above 0.80. Elastic net performs
+marginally best, consistent with moderate-dimensional clinical data where
+some regularization helps. XGBoost was dropped due to R 4.2 incompatibility.
+Total runtime: 27.3 minutes.
+
+### CATE modeling (stage 5) — the headline result
+
+The CATE comparison was run twice on the derivation set (n=670) with
+cv_k=100 and 5 methods. Pass 1 used 35 clinical covariates only.
+Pass 2 used 35 clinical + 8 log-transformed biomarkers (43 total).
+Both passes used the same seed, same CV splits, same methods — only
+the covariate vector differed.
+
+**AUTOC comparison (×100; higher = more detected heterogeneity):**
+
+| Method | Clinical only | + Biomarker | Change |
+|---|---|---|---|
+| Causal Forest | 2.77 | 2.80 | +0.03 (flat) |
+| Local Linear RF R-learner | 0.87 | 2.09 | +1.22 (large) |
+| Bayesian Causal Forest | 1.72 | 2.03 | +0.31 (meaningful) |
+| Tian Elastic Net | 0.79 | 1.08 | +0.29 (meaningful) |
+| Probit BART S-learner | -0.92 | -1.44 | inverted (method failure) |
+
+**Kendall's tau (rank correlation; closer to 1 = better ranking):**
+
+| Method | Clinical only | + Biomarker |
+|---|---|---|
+| Causal Forest | 0.96 | 0.91 |
+| Local Linear RF R-learner | 0.46 | 0.94 |
+| Bayesian Causal Forest | 0.93 | 0.95 |
+| Tian Elastic Net | 0.55 | 0.60 |
+| Probit BART S-learner | -0.60 | -0.59 |
+
+**Interpretation:**
+
+Heterogeneous treatment effects exist in CLOVERS — four of five CATE
+methods detect positive AUTOC in both passes. This is consistent with
+Kiernan et al.'s finding that molecular subphenotypes respond differently
+to fluid resuscitation strategy.
+
+Biomarkers carry real HTE-relevant information. The local linear RF
+R-learner more than doubles its AUTOC when biomarkers are added
+(0.87 → 2.09), and its Kendall's tau jumps from 0.46 to 0.94 —
+meaning it goes from barely ranking patients correctly to near-perfect
+ranking. Bayesian causal forest and Tian elastic net also show meaningful
+improvement.
+
+However, the causal forest — the best-performing method overall — barely
+improves with biomarkers (2.77 → 2.80). It already finds most of the
+heterogeneity from clinical variables alone. This suggests that a
+sufficiently flexible nonparametric method can extract HTE-relevant
+signal from clinical covariates that overlaps substantially with what
+the biomarkers provide.
+
+Probit BART produces negative AUTOC in both passes, meaning its predicted
+treatment effect rankings are inverted relative to the truth. This method
+is not functioning on this dataset and should be excluded from
+interpretation.
+
+Runtime: Pass 1 took 6.9 minutes, Pass 2 took 9.8 minutes.
+
+### Variable importance (from confirmatory model)
+
+When cf.CATE was trained on the full derivation set and applied to
+validation with the +biomarker covariate set, the top 10 variables
+by importance were:
+
+| Rank | Variable | Importance |
+|---|---|---|
+| 1 | Temperature | 0.064 |
+| 2 | sRAGE (biomarker) | 0.057 |
+| 3 | Angiopoietin-2 (biomarker) | 0.056 |
+| 4 | S/F ratio | 0.055 |
+| 5 | sTNFR-1 (biomarker) | 0.052 |
+| 6 | Sodium | 0.042 |
+| 7 | sTREM-1 (biomarker) | 0.039 |
+| 8 | Lactate (log) | 0.037 |
+| 9 | Age | 0.037 |
+| 10 | Bicarbonate | 0.035 |
+
+Four of the top 10 variables are biomarkers (sRAGE, Ang-2, sTNFR-1,
+sTREM-1). Notably, three of these four (Ang-2, sTNFR-1, and by
+extension sRAGE as an endothelial/inflammatory marker) overlap with the
+biomarkers Kiernan et al. used for their LCA subphenotyping, providing
+convergent evidence that endothelial injury and inflammation markers drive
+treatment effect heterogeneity in CLOVERS.
+
+In the clinical-only model, the top variables were S/F ratio, temperature,
+BUN, glucose (log), sodium, lactate (log), age, hemoglobin, bicarbonate,
+and platelets (sqrt).
+
+### Confirmatory analysis (stage 6)
+
+The best CATE method (cf.CATE) was trained on the full derivation set
+(n=670) and used to predict individualized treatment effects on the
+held-out validation set (n=670). Validation patients were classified
+into benefit, indeterminate, and harm tertiles based on their predicted
+CATE scores.
+
+**Clinical only model:**
+
+| Subgroup | N | Mortality (liberal) | Mortality (restrictive) | Difference | p-value |
+|---|---|---|---|---|---|
+| Benefit (bottom tertile) | 223 | 7.5% | 6.9% | +0.6% | 0.50 |
+| Indeterminate | 224 | 9.7% | 10.8% | -1.1% | 0.96 |
+| Harm (top tertile) | 223 | 19.3% | 20.2% | -0.9% | 0.50 |
+
+**Clinical + biomarker model:**
+
+| Subgroup | N | Mortality (liberal) | Mortality (restrictive) | Difference | p-value |
+|---|---|---|---|---|---|
+| Benefit (bottom tertile) | 223 | 5.6% | 4.3% | +1.3% | 0.55 |
+| Indeterminate | 224 | 11.1% | 9.4% | +1.8% | 0.83 |
+| Harm (top tertile) | 223 | 20.0% | 23.9% | -3.9% | 0.71 |
+
+No subgroup reached statistical significance in either model (all p > 0.50).
+However, the models do correctly stratify patients by overall risk: the
+harm tertile has approximately 20% mortality compared to 5-7% in the
+benefit tertile, confirming that the CATE model captures meaningful
+prognostic variation even if the subgroup-specific treatment effects
+are not individually significant.
+
+The null confirmatory result is consistent with underpowering rather than
+absence of HTE. With approximately 93 events in the 670-patient validation
+set split into thirds, each subgroup contains roughly 31 events and
+approximately 110 patients per treatment arm — substantially less power
+than Kiernan et al.'s interaction test, which used 1,289 patients in two
+groups (not three). Future work with larger validation samples or
+alternative confirmation strategies (e.g., benefit vs everyone else rather
+than tertiles) may recover the signal.
+
 ### Confirmatory analysis
 
-[TODO: describe `confirm.analysis.R` usage on the validation set once it's
-written.]
-
+No subgroup reached significance (all p > 0.50). The model 
+stratifies by risk (harm group ~20% mortality vs benefit group ~5-7%).
+There are only ~93 events in 670 validation patients split into thirds so this may be attributed to underpowering. 
 ---
 
 ## How to reproduce
@@ -209,57 +413,84 @@ cd clover_hte_biomarkers
 Rscript preprocessing/00_setup_renv.R
 ```
 
-### Data layout expected
 
-```
-data/
-├── Data/
-│   ├── Curated datasets/
-│   │   ├── yw.csv
-│   │   ├── xvars_egdt.csv
-│   │   └── xvars_other.csv
-│   └── data/csv/
-│       ├── DATASET.csv
-│       └── DERIVED.csv
-└── Share.4.29.26.csv     <- the biomarker file, directly in data/
-```
 
 ### Run order
 
-```bash
-cd preprocessing
-Rscript 01_check_data_availability.R    # diagnostic: do all files exist + load?
-Rscript 02_build_flat_file.R            # stage 1: the flat file
-Rscript 02b_build_variable_source_table.R  # variable → source CSV
-Rscript 02c_check_missingness_and_qc.R  # missingness summary
-Rscript 03_split_derivation_validation.R   # stage 2: 50/50 split
-Rscript 03b_compare_der_val.R           # stage 2b: equivalence check
-Rscript 04_impute.R                     # stage 3: missForest imputation
-Rscript 05_risk_modeling.R              # stage 4: risk modeling comparison
-Rscript 06_participant_flow_extract.R   # CONSORT-style counts + Mermaid
-Rscript 07_cate_modeling.R              # stage 5: CATE comparison (LONG: hours)
-Rscript 00_sofa_charlson_audit.R        # standalone: SOFA/Charlson audit
-```
+# From the project root:
 
-Each script writes to its own subfolder under `outputs/`. Total runtime
-for the full pipeline is dominated by `07_cate_modeling.R` (several hours,
-possibly overnight). All other scripts together run in well under one hour.
+# Stage 0: setup
+Rscript preprocessing/00_setup_renv.R
+
+# Stage 1: data assembly
+cd preprocessing
+Rscript 01b_explore_all_datasets.R
+Rscript 02_build_flat_file.R
+Rscript 02b_build_variable_source_table.R
+Rscript 02c_missing.R
+Rscript 00_sofa_charlson_audit.R
+
+# Stage 2: split
+Rscript 03_split_derivation.R
+Rscript 03b_comparasion.R
+
+# Stage 3: imputation
+cd ../scripts
+Rscript 04_Impute.R
+
+# Stage 4: risk modeling
+Rscript 05_risk_modeling.R
+
+# Stage 5: CATE modeling (SLOW: several hours)
+Rscript 07_cate_modeling.R
+
+# Stage 6: confirmatory analysis
+Rscript 10_confirmatory_analysis.R
+
+# Stage 7: Publication Materials
+Rscript 11_publication_tables.R
+
+# Supplementary
+cd ../preprocessing
+Rscript ../flowcharts/
+
+See mermaid diagrams rendered related to the archecture, methodology, and participants. 
 
 ---
 
 ## Repo structure
 
-```
 clover_hte_biomarkers/
-├── config/config.R              <- all paths, edit PROJECT_ROOT once
-├── data/                        <- raw inputs
-├── cate-repo/                   <- shared CATE-derivation-and-evaluation-main
-├── preprocessing/               <- numbered analytic scripts
-├── outputs/                     <- each script writes to its own subfolder
-└── docs/                        <- README, supplementary tables, methods
-```
+├── config/
+│   └── config.R                    <- all paths; edit PROJECT_ROOT once
+├── data/                           <- raw data (gitignored)
+│   ├── Data/
+│   │   ├── Curated datasets/       <- yw.csv, xvars_egdt.csv, xvars_other.csv
+│   │   └── data/csv/               <- DATASET.csv, DERIVED.csv
+│   └── Share.4.29.26.csv           <- biomarker file (V1+V2+V3)
+├── cate-repo/                      <- Victor's shared CATE toolkit (unchanged)
+├── preprocessing/                  <- stages 0-2 scripts
+├── scripts/                        <- stages 3-6 and post-CATE output scripts
+├── outputs/                        <- each script writes to its own subfolder
+│   ├── 02_build_flat_file/
+│   ├── 03_split_derivation_validation/
+│   ├── 04_impute/
+│   ├── 05_risk_modeling/
+│   ├── 07_cate_modeling/
+│   ├── 09_build_cate_outputs/
+│   └── 10_confirmatory_analysis/
+|.  └── 11_table1/
+    
+├── flowcharts/                     <- Mermaid participant flow diagrams
+├── documents/                      <- eTables builder
+├── relevant_literature/            <- reference PDFs (these are .gitignored in public repos)
+└── README.md
 
----
+
+## Flowcharts
+https://mermaid.ai/open-source/intro/index.html?utm_source=mermaid_js&utm_medium=landing_pop_up&utm_campaign=docs_v1
+
+Flowcharts were rendered using Mermaid. See the above documentation for more information.
 
 ## Contact
 

@@ -2,18 +2,8 @@
 # 06_participant_flow_extract.R
 #
 # PURPOSE: extract the real patient counts at each stage of inclusion in
-# this project's analytic cohort, and emit a Mermaid flowchart syntax block
-# you can paste into mermaid.live, a GitHub markdown file, or any tool that
-# renders Mermaid syntax.
-#
-# IMPORTANT HONESTY NOTE: this can only produce counts for the part of the
-# flow that's downstream of randomization, because the files in this project
-# represent the analytic cohort -- they don't contain the screening logs or
-# excluded-pre-randomization patients. Upstream numbers (screened, refused
-# consent, excluded for protocol reasons, etc.) must be filled in by hand
-# from the published CLOVERS protocol or main-results paper. Placeholders
-# are left in the Mermaid output for those numbers.
-#
+# this project's analytic cohort
+
 # Paths come from config/config.R.
 #
 # Output (written to outputs/06_participant_flow_extract/):
@@ -22,7 +12,7 @@
 #   participant_flow_report.txt  -- full console output captured
 # ============================================================================
 
-source(file.path(dirname(getwd()), "config", "config.R"))
+source(file.path(getwd(), "config", "config.R"))
 out_dir <- make_output_subdir("06_participant_flow_extract")
 
 report_path <- file.path(out_dir, "participant_flow_report.txt")
@@ -171,8 +161,8 @@ cat("============================================================\n")
 cat("Saved to:", mermaid_path, "\n\n")
 cat("Paste the contents below into https://mermaid.live to render it,\n")
 cat("or embed in a markdown file inside a ```mermaid ... ``` block.\n")
-cat("The red-shaded nodes at the top are placeholders -- replace the ???\n")
-cat("values with numbers from the published CLOVERS trial paper.\n\n")
+cat("The red-shaded nodes at the top are placeholders and manual replacement of  the ??? is needed\n")
+cat("Can substitute values with numbers from the published CLOVERS trial paper.\n\n")
 cat(mermaid_text)
 cat("\n")
 

@@ -1,0 +1,95 @@
+flowchart LR
+
+subgraph KIERNAN_BOX["CLOVERS Biomarker Subphenotype Study (Kiernan, 2025)"]
+    direction LR
+
+    SCREEN["<b>Patients Screened from 60 US Centers</b><br/>03/2018 – 01/2022<br/><b>n ≈ 3,300</b>"]
+
+    EXCL_PRE["<b>Excluded</b><br/><b>n ≈ 1,737</b><br/>Not consented"]
+
+    RAND["CLOVERS Randomized<br/><b>n = 1,563</b><br/>Restrictive: 782 · Liberal: 781"]
+
+    K_EXCL["<b>Excluded</b><br/><b>n = 274</b><br/>259 unavailable plasma<br/>15 no serum creatinine"]
+
+    K_COHORT["Analytic cohort<br/><b>n = 1,289</b><br/>Complete Ang-1 +<br/>Ang-2 + sTNFR-1 + creatinine"]
+
+    K_RESULT["LCA subphenotypes"]
+    K_SP1["SP1: <b>n = 1,016</b> (79%)"]
+    K_SP2["SP2: <b>n = 273</b> (21%)"]
+
+    SCREEN --> RAND
+    SCREEN -.-> EXCL_PRE
+    RAND --> K_COHORT
+    RAND --> K_EXCL
+    K_EXCL --> K_COHORT
+    K_COHORT --> K_RESULT
+    K_RESULT --> K_SP1
+    K_RESULT --> K_SP2
+end
+
+
+    subgraph DATASOURCES ["CLOVERS Source Datasets"]
+        direction LR
+        DB1[("yw.csv<br/><b>1,563</b> rows<br/>outcome, treatment")]
+        DB2[("xvars_egdt.csv<br/><b>1,550</b> rows<br/>demographics, labs,<br/>Charlson")]
+        DB3[("xvars_other.csv<br/><b>1,550</b> rows<br/>S/F ratio, BMI,<br/>infection site")]
+        DB4[("Share.4.29.26.csv<br/><b>2,649</b> rows<br/>8 plasma biomarkers<br/>V1 + V2 + V3")]
+    end
+
+    RAND --> DATASOURCES
+
+    DATASOURCES --> MERGE["<b> n = 1563 </b><br/>Filter by ID<br/> Inclusion: Visit 1 biomarkers <br/>Log/sqrt transforms applied"]
+    MERGE --> GENERATE["Generate data source called 02_build_flat_file.R</b>"]
+
+    MERGE -.-> EXCL_BIO["<b>Excluded \n n = 223</b> (no V1 biomarker data present)<br/>"]
+    GENERATE --> COHORT["<b>Our Biomarker Analytic Cohort</b><br/><b>n = 1,340</b><br/>Restrictive: 672 · Liberal: 668<br/>"]
+
+    COHORT --> SPLIT["50/50 stratified random split<br/>seed = 03202026<br/><b>03_split_derivation.R</b>"]
+
+    SPLIT --> DER["Derivation set<br/><b>n = 670</b><br/>Restrictive: 336 · Liberal: 334"]
+    SPLIT --> VAL["Validation set<br/><b>n = 670</b><br/>Restrictive: 336 · Liberal: 334"]
+
+    DER --> IMPUTE["missForest imputation<br/>Fit on derivation, applied to validation<br/><b>1,310</b> missing cells → 0<br/><b>04_Impute.R</b>"]
+    VAL --> IMPUTE
+
+    IMPUTE --> RISK["Risk modeling · 5 methods<br/>Control-arm only · cv_k = 50<br/>Best AUC: enet <b>0.862</b><br/><b>05_risk_modeling.R</b>"]
+
+    RISK --> CATE["CATE modeling · 5 methods · cv_k = 100<br/>Pass 1: 35 clinical covariates<br/>Pass 2: 35 clinical + 8 biomarkers<br/><b>07_cate_modeling.R</b>"]
+
+     CATE --> CONFIRM["Confirmatory analysis on validation<br/><b>10_confirmatory_analysis.R</b><br/>cf.CATE trained on derivation, applied to validation<br/>Tertile subgroups: benefit / indeterminate / harm"]
+     CONFIRM --> NO_SUBGROUP["No subgroup reached significance (all p > 0.50)<br/> (~93 events in validation)"]
+
+    style CONFIRM fill:#fff9c4,stroke:#f9a825,color:#000
+
+   
+   
+    style SCREEN fill:#ede7f6,stroke:#7e57c2,color:#000
+    style RAND fill:#e1bee7,stroke:#7e57c2,color:#000
+
+    style EXCL_PRE fill:#ffcdd2,stroke:#c62828,color:#000
+    style EXCL_BIO fill:#ffcdd2,stroke:#c62828,color:#000
+    style K_EXCL fill:#ffcdd2,stroke:#c62828,color:#000
+
+    style KIERNAN_BOX fill:#f3e5f5,stroke:#9575cd,color:#000
+    style K_COHORT fill:#ede7f6,stroke:#7e57c2,color:#000
+    style K_RESULT fill:#ede7f6,stroke:#7e57c2,color:#000
+
+
+    style DATASOURCES fill:#f3e5f5,stroke:#9575cd,color:#000
+    style DB1 fill:#ede7f6,stroke:#7e57c2,color:#000
+    style DB2 fill:#ede7f6,stroke:#7e57c2,color:#000
+    style DB3 fill:#ede7f6,stroke:#7e57c2,color:#000
+    style DB4 fill:#ede7f6,stroke:#7e57c2,color:#000
+
+    style MERGE fill:#e8eaf6,stroke:#5c6bc0,color:#000
+
+    style COHORT fill:#c8e6c9,stroke:#2e7d32,color:#000
+
+    style SPLIT fill:#e8f5e9,stroke:#43a047,color:#000
+    style DER fill:#c8e6c9,stroke:#2e7d32,color:#000
+    style VAL fill:#c8e6c9,stroke:#2e7d32,color:#000
+    style IMPUTE fill:#e8f5e9,stroke:#43a047,color:#000
+    style RISK fill:#e8f5e9,stroke:#43a047,color:#000
+    style CATE fill:#c8e6c9,stroke:#2e7d32,color:#000
+
+    style CONFIRM fill:#fff9c4,stroke:#f9a825,color:#000,stroke-dasharray: 5 5

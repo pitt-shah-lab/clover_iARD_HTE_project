@@ -6,7 +6,7 @@
 # test p-values in the subtitle.
 # ============================================================================
 
-source(file.path(dirname(getwd()), "config", "config.R"))
+source(file.path((getwd()), "config", "config.R"))
 out_dir <- make_output_subdir("09_build_cate_outputs")
 
 library(ggplot2)
