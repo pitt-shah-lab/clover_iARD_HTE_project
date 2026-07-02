@@ -1,93 +1,72 @@
 flowchart TD
 
-    subgraph DATA["Data preparation (02-series)"]
-        A1[/"Raw trial data<br/>DATASET.csv / DERIVED.csv"\]
-        A2[/"Variable inventory · 02b"\]
-        A3[/"Missingness / QC check · 02c"\]
+    subgraph DATA["Data prep (upstream, 02-series)"]
+        A1[Raw trial data<br/>DATASET.csv / DERIVED.csv]
+        A2[Variable inventory<br/>02b]
+        A3[Missingness / QC check<br/>02c]
         A1 --> A2 --> A3
     end
 
-    subgraph SPLIT["Splitting and imputation (03-04)"]
-        B1["03_split_derivation.R<br/>Stratified random 50/50 by arm<br/>seed = 03202026"]
-        B2["missforest_train.R · impute_train_and_save_rfs()<br/>Fit and freeze RFs on derivation set"]
-        B3["missforest_train.R · impute_test_with_rfs()<br/>Apply frozen RFs to validation set"]
+    subgraph SPLIT["Splitting & Imputation"]
+        B1["balanced_split.R<br/>allocation_procedure()<br/>covariate-balanced derivation/validation split"]
+        B2["missforest_train.R<br/>impute_train_and_save_rfs()<br/>fit + freeze RFs on derivation set"]
+        B3["missforest_train.R<br/>impute_test_with_rfs()<br/>apply frozen RFs to validation set"]
         A3 --> B1
-        B1 -->|derivation| B2
-        B1 -->|validation| B3
+        B1 -->|derivation set| B2
+        B1 -->|validation set| B3
         B2 -.frozen RFs.-> B3
     end
 
     subgraph RISK["Risk modeling (05)"]
-        C1["rf.risk / logreg.risk / enet.risk / bart.risk<br/>Control-arm only · cv_k = 50<br/>Best AUC: enet 0.862"]
+        C1["rf.risk / rf.risk.10 / logreg.risk<br/>(scoring_methods_v4.R)"]
         B2 --> C1
     end
 
-    subgraph CV["Repeated CV harness (07)"]
-        D1["cross_validation.R · oest.cv.fun()<br/>Repeated 50/50 splits · cv_k = 100"]
-        D2["5 CATE learners: cf.CATE, llrf, BCF<br/>pBART, ElasticNet<br/>Two passes: clinical vs +biomarker"]
+    subgraph CV["Repeated CV harness"]
+        D1["cross_validation.R<br/>oest.cv.fun() / oest.cv.fast()<br/>repeated 50/50 splits within derivation set"]
+        D2["scoring_methods_v4.R<br/>~16 CATE/risk learners:<br/>S-/R-/X-learners, ModCov LASSO/ElasticNet,<br/>causal forest (cf.CATE, cf.lin.CATE), BCF"]
         B2 --> D1
         D1 <--> D2
     end
 
-    subgraph POST["Post-processing and evaluation (08-09)"]
-        E1["post_process_v6.R · post.cv.fun()<br/>TOC curves · AUTOC · AUQINI"]
-        E3["gates_inference.R · gates.fun()<br/>GATES · monotonicity · BLP calibration<br/>⚠ 08_gates_inference.R not yet written"]
-        E4["michael_q.R · michaelq()<br/>2xK interaction test"]
+    subgraph POST["Post-processing & evaluation"]
+        E1["post_process_v6.R<br/>post.cv.fun()<br/>TOC curves, AUTOC/AUQINI, SE (bootstrap/perturbation)"]
+        E2["uplift_fast.R<br/>uplift.fast()<br/>fast ARR/uplift curve"]
+        E3["gates_inference.R<br/>gates.fun()<br/>GATES by score quantile,<br/>monotonicity + extreme-bin tests, BLP calibration"]
+        E4["michael_q.R<br/>michaelq()<br/>2xK interaction test<br/>(e.g. across quantile bins or sites)"]
         D1 --> E1
+        D1 --> E2
         D1 --> E3
         E3 --> E4
     end
 
-    subgraph CONFIRM["Confirmatory analysis (10)"]
-        F1["confirm_analysis.R · cf.CATE<br/>Trained on derivation applied to validation<br/>Clinical-only + clinical+biomarker"]
-        F2["Tertile subgroups<br/>benefit / indeterminate / harm<br/>Result: all p > 0.50 — null finding"]
+    subgraph CONFIRM["Confirmatory analysis (held-out test set)"]
+        F1["confirm_analysis.R<br/>confirm_analysis()<br/>classify test patients: benefit / indeterminate / harm<br/>using pre-specified threshold"]
+        F2["Outcome test per class<br/>(prop.test: benefit/indet/harm rows)"]
         B3 --> F1
         D2 -.trained models.-> F1
         F1 --> F2
     end
 
-    subgraph OUT["Publication outputs (09 + 11)"]
-        G1["eTable 1: variable inventory"]
-        G2["eTable 2: missingness"]
-        G3["eTable 3: der vs val balance"]
-        G4["eTable 4: risk AUC"]
-        G5["eTable 5: SOFA/Charlson audit"]
-        G6["eTable 6: CATE comparison"]
-        G7["eTable 7: biomarker contribution"]
-        G8["Figures: TOC, GATES, calibration"]
+    subgraph OUT["eTables / figures (08_build_etables.R)"]
+        G1[eTable 1: variable inventory]
+        G2[eTable 2: missingness]
+        G3[eTable 3: derivation vs validation balance]
+        G4[eTable 4: risk model AUC comparison]
+        G5[eTable 5: SOFA/Charlson audit]
+        G6["eTable 6: CATE method comparison<br/>(needs E1)"]
+        G7["eTable 7: biomarker contribution<br/>(needs E3/E4)"]
+        G8["Not yet built:<br/>TOC/uplift figure, GATES forest plot,<br/>calibration plot, confirmatory subgroup table"]
         A2 --> G1
         A3 --> G2
         B1 --> G3
         C1 --> G4
-        A3 --> G5
         E1 --> G6
         E3 --> G7
         F2 --> G8
         E1 --> G8
+        E3 --> G8
     end
 
-    classDef dataNode    fill:#FFE000,stroke:#F57F17,color:#4E342E
-    classDef splitNode   fill:#18FFFF,stroke:#006064,color:#004D40
-    classDef riskNode    fill:#FFAB40,stroke:#E65100,color:#BF360C
-    classDef cvNode      fill:#EA80FC,stroke:#7B1FA2,color:#4A148C
-    classDef postNode    fill:#69F0AE,stroke:#1B5E20,color:#1B5E20
-    classDef confirmNode fill:#80D8FF,stroke:#01579B,color:#01579B
-    classDef outNode     fill:#FF80AB,stroke:#880E4F,color:#880E4F
-    classDef pending     fill:#FFD740,stroke:#FF6D00,stroke-width:2px,stroke-dasharray:5 5,color:#BF360C
-
-    class A1,A2,A3 dataNode
-    class B1,B2,B3 splitNode
-    class C1 riskNode
-    class D1,D2 cvNode
-    class E1,E3,E4 postNode
-    class F1,F2 confirmNode
-    class G1,G2,G3,G4,G5,G6,G7,G8 outNode
-    class G4,G6,G7,G8 pending
-
-    style DATA    fill:#FFFDE7,stroke:#F9A825,stroke-width:2px
-    style SPLIT   fill:#E0FFFF,stroke:#006064,stroke-width:2px
-    style RISK    fill:#FFF3E0,stroke:#E65100,stroke-width:2px
-    style CV      fill:#F3E5F5,stroke:#7B1FA2,stroke-width:2px
-    style POST    fill:#E8F5E9,stroke:#388E3C,stroke-width:2px
-    style CONFIRM fill:#E1F5FE,stroke:#01579B,stroke-width:2px
-    style OUT     fill:#FCE4EC,stroke:#880E4F,stroke-width:2px
+    classDef pending fill:#fff3cd,stroke:#b8860b,stroke-width:1px;
+    class G6,G7,G8 pending;
