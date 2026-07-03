@@ -1,7 +1,7 @@
 # ============================================================================
 # 03b_compare_der_val.R
 #
-# PURPOSE (Victor's stage 2b): build a table comparing every covariate,
+# Objective (Victor's stage 2b): table comparing every covariate,
 # outcome, and treatment variable between the derivation and validation
 # halves, to confirm the split produced two equivalent groups.
 #
@@ -9,14 +9,10 @@
 # For binary variables: proportion in each half, and a chi-squared test
 # p-value (Fisher's exact if any expected cell count is small).
 #
-# This is descriptive/diagnostic only -- it does not modify the split or the
-# data. Large p-values (no significant difference) are the GOOD outcome here
-# -- they indicate the two halves are statistically equivalent, as expected
-# from a proper random split. A few p < 0.05 results by chance alone are not
-# unusual given the number of variables tested and are not cause for concern
-# on their own.
+# Large p-values indicate the two halves are statistically equivalent, as expected
+# from a proper random split. A few values of < ,.05 is okay. 
 #
-# Paths come from config/config.R -- edit PROJECT_ROOT there, not here.
+# Paths come from config/config.R
 #
 # Input:
 #   outputs/03_split_derivation_validation/flat_file_der.csv
@@ -26,7 +22,8 @@
 #   der_val_comparison_report.txt
 # ============================================================================
 
-source(file.path(dirname(getwd()), "config", "config.R"))
+source(file.path("config", "config.R"))
+
 out_dir <- make_output_subdir("03b_compare_der_val")
 
 split_dir <- file.path(OUTPUTS_DIR, "03_split_derivation_validation")
@@ -133,6 +130,35 @@ cat("by chance alone, even with two truly equivalent groups. A small number\n")
 cat("of borderline p-values is expected and not evidence of a bad split.\n")
 cat("Investigate further only if a p-value is very small or the variable\n")
 cat("involved is a key confounder/effect-modifier you plan to rely on.\n")
+
+# ---- Average treatment effects per half (Victor request) ----
+cat("\n============================================================\n")
+cat("AVERAGE TREATMENT EFFECTS BY HALF\n")
+cat("============================================================\n")
+
+ate_per_half <- function(df, label) {
+  y1 <- df$inhosp90[df$w == 1]
+  y0 <- df$inhosp90[df$w == 0]
+  n1 <- length(y1); n0 <- length(y0)
+  r1 <- mean(y1);   r0 <- mean(y0)
+  ate <- r1 - r0
+  pt <- prop.test(c(sum(y1), sum(y0)), c(n1, n0))
+  cat(sprintf("  %s (n=%d):\n", label, nrow(df)))
+  cat(sprintf("    Treated (w=1):   %d/%d = %.1f%%\n", sum(y1), n1, 100*r1))
+  cat(sprintf("    Control (w=0):   %d/%d = %.1f%%\n", sum(y0), n0, 100*r0))
+  cat(sprintf("    ATE (risk diff): %+.1f%%  (p = %.3f)\n\n", 100*ate, pt$p.value))
+  data.frame(half = label, n = nrow(df),
+             n_w1 = n1, n_w0 = n0,
+             rate_w1 = round(r1, 4), rate_w0 = round(r0, 4),
+             ATE = round(ate, 4), p_value = round(pt$p.value, 4))
+}
+
+ate_der <- ate_per_half(der, "Derivation")
+ate_val <- ate_per_half(val, "Validation")
+ate_table <- rbind(ate_der, ate_val)
+
+write.csv(ate_table, file.path(out_dir, "ate_by_half.csv"), row.names = FALSE)
+cat("Wrote: ate_by_half.csv\n")
 
 write.csv(results, file.path(out_dir, "der_val_comparison_table.csv"), row.names = FALSE)
 

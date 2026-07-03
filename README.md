@@ -3,14 +3,11 @@
 
 ## What this project does
 
-This repository contains the  pipeline for evaluating whether 8 differnt 
-biomarkers found in plasma improve detection of heterogeneous treatment effects (HTE) in the
-CLOVERS sepsis trial patient population, beyond clinical covariates alone.
+This repository contains the  pipeline for evaluating whether 8 different biomarkers found in plasma improve detection of heterogeneous treatment effects (HTE) in the
+CLOVERS sepsis trial patient population. This pipeline explores beyond clinical covariates.
 
-The pipeline mirrors the analytic structure of a prior HTE analysis on the
-ADRENAL trial (V. Talisa et al.), adapting it to CLOVERS-specific data and
-extending it to incorporate 8 plasma biomarkers (IL-1, Angiopoietin-1/2,
-TNFR-1, IL-6, sTREM-1, KIM-1, sRAGE) measured at trial baseline.
+The pipeline mirrors the analytic structure of a prior HTE analysis on the ADRENAL trial (Talisa et al and Shah et al), adapting it to CLOVERS-specific data and extending it to incorporate 8 plasma biomarkers (IL-1, Angiopoietin-1/2,
+TNFR-1, IL-6, sTREM-1, KIM-1, sRAGE) which are measured during patient's first visit (post study enrollment).
 
 ---
 ## Average treatment effects may mask true treatment differences
@@ -236,10 +233,6 @@ clinical covariates only, once with clinical + 8 biomarker covariates —
 producing a side-by-side AUTOC table that is the project's primary result.
 
 
-### Results 
-
----
-
 ## Results
 
 ### Risk modeling (stage 4)
@@ -387,14 +380,20 @@ groups (not three). Future work with larger validation samples or
 alternative confirmation strategies (e.g., benefit vs everyone else rather
 than tertiles) may recover the signal.
 
-### Confirmatory analysis
 
-No subgroup reached significance (all p > 0.50). The model 
-stratifies by risk (harm group ~20% mortality vs benefit group ~5-7%).
-There are only ~93 events in 670 validation patients split into thirds so this may be attributed to underpowering. 
----
 
-## How to reproduce
+## How to reproduce & Implementation steps 
+
+
+# R Studio
+
+Installation of new R packages 
+Rscript -e 'install.packages("randomForest", repos="https://cloud.r-project.org")' 2>&1 | tail -20
+
+Use of packages, including Random Forest requires installation of fortran (as random forest is written in fortran based code similiarly gboost has a Fortran/C build)
+Rscript -e 'install.packages(c("glmnet","xgboost"), repos="https://cloud.r-project.org")'
+Rscript -e 'library(stochtree); cat("stochtree OK\n")'
+Rscript -e 'install.packages("grf", repos="https://cloud.r-project.org")'
 
 ### One-time setup
 
@@ -413,10 +412,11 @@ cd clover_hte_biomarkers
 Rscript preprocessing/00_setup_renv.R
 ```
 
-
+### Run order
 
 ### Run order
 
+```bash
 # From the project root:
 
 # Stage 0: setup
@@ -449,17 +449,9 @@ Rscript 10_confirmatory_analysis.R
 
 # Stage 7: Publication Materials
 Rscript 11_publication_tables.R
-
-# Supplementary
-cd ../preprocessing
-Rscript ../flowcharts/
-
-See mermaid diagrams rendered related to the archecture, methodology, and participants. 
-
+```
 ---
-
-## Repo structure
-
+```
 clover_hte_biomarkers/
 ├── config/
 │   └── config.R                    <- all paths; edit PROJECT_ROOT once
@@ -478,32 +470,20 @@ clover_hte_biomarkers/
 │   ├── 05_risk_modeling/
 │   ├── 07_cate_modeling/
 │   ├── 09_build_cate_outputs/
-│   └── 10_confirmatory_analysis/
-|.  └── 11_table1/
-    
+│   ├── 10_confirmatory_analysis/
+│   └── 11_table1/
 ├── flowcharts/                     <- Mermaid participant flow diagrams
 ├── documents/                      <- eTables builder
-├── relevant_literature/            <- reference PDFs (these are .gitignored in public repos)
+├── relevant_literature/            <- reference PDFs (gitignored)
 └── README.md
-
+```
 
 ## Flowcharts
-https://mermaid.ai/open-source/intro/index.html?utm_source=mermaid_js&utm_medium=landing_pop_up&utm_campaign=docs_v1
 
-Flowcharts were rendered using Mermaid. See the above documentation for more information.
+Architecture and participant flow diagrams are in `flowcharts/` as Mermaid (`.mmd`) files. Render them at [mermaid.live](https://mermaid.live) or embed in markdown with a extension for mermaid code in VSCODE.
 
 ## Contact
 
 Contact Jaspreet Singh, Victor Talisa, or Faraaz Shah with questions on this analysis. 
 
 
-
-# R Studio
-
-Installation of new R packages 
-Rscript -e 'install.packages("randomForest", repos="https://cloud.r-project.org")' 2>&1 | tail -20
-
-Use of packages, including Random Forest requires installation of fortran (as random forest is written in fortran based code similiarly gboost has a Fortran/C build)
-Rscript -e 'install.packages(c("glmnet","xgboost"), repos="https://cloud.r-project.org")'
-Rscript -e 'library(stochtree); cat("stochtree OK\n")'
-Rscript -e 'install.packages("grf", repos="https://cloud.r-project.org")'
