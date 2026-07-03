@@ -122,7 +122,7 @@ auc_summary <- auc_summary[order(-auc_summary$mean_auc), ]
 cat("AUC summary across", cv_k, "cross-validation folds, sorted best first:\n\n")
 print(auc_summary, row.names = FALSE)
 
-write.csv(auc_summary, file.path(out_dir, "05_additional_risk_models.R"),
+write.csv(auc_summary, file.path(out_dir, "risk_model_comparison.csv"),
           row.names = FALSE)
 write.csv(auc_mat, file.path(out_dir, "risk_model_auc_per_fold.csv"),
           row.names = FALSE)
