@@ -253,20 +253,6 @@ combined <- rbind(resmat_clinical, resmat_bio)
 write.csv(combined, file.path(out_dir, "confirmatory_subgroups.csv"),
           row.names = FALSE)
 
-# ============================================================================
-# STEP 3: Summary
-# ============================================================================
 
-cat("============================================================\n")
-cat("SUMMARY\n")
-cat("============================================================\n\n")
-cat("These results use Y.hat from the elastic net risk model.\n")
-cat("Compare with outputs/10_confirmatory_analysis/ (without Y.hat)\n")
-cat("to see the effect of supplying risk predictions.\n\n")
-cat("Next step: run 08b_gates_with_yhat.R on these predictions\n")
-cat("to get the updated BLP p-values.\n\n")
-cat("All outputs written to:\n  ", out_dir, "\n")
 
-sink()
-close(report_con)
 cat("\nDone. Report saved to:", report_path, "\n")

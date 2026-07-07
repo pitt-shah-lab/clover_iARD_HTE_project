@@ -18,6 +18,7 @@
 #   ids_internal_list.RDS   -- list(ids_der = ..., ids_val = ...)
 #   flat_file_der.csv       -- derivation half, full columns
 #   flat_file_val.csv       -- validation half, full columns
+#comment
 # ============================================================================
 
 source(file.path(dirname(getwd()), "config", "config.R"))

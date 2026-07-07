@@ -395,7 +395,7 @@ Rscript -e 'install.packages(c("glmnet","xgboost"), repos="https://cloud.r-proje
 Rscript -e 'library(stochtree); cat("stochtree OK\n")'
 Rscript -e 'install.packages("grf", repos="https://cloud.r-project.org")'
 
-### One-time setup
+### Intialization
 
 ```bash
 # 1. Clone the repo
@@ -412,7 +412,7 @@ cd clover_hte_biomarkers
 Rscript preprocessing/00_setup_renv.R
 ```
 
-### Run order
+
 
 ### Run order
 
@@ -444,37 +444,48 @@ Rscript 05_risk_modeling.R
 # Stage 5: CATE modeling (SLOW: several hours)
 Rscript 07_cate_modeling.R
 
-# Stage 6: confirmatory analysis
-Rscript 10_confirmatory_analysis.R
+# Stage 5b: CATE with Y.hat + third pass
+Rscript 07b_cate_modeling_risk.R
+Rscript 07c_cate_risk_plus_biomarker.R
 
-# Stage 7: Publication Materials
-Rscript 11_publication_tables.R
-```
+# Stage 6b: confirmatory with Y.hat
+Rscript 10b_confirmation_analysis_with_yhat.R
+
+# Stage 7: GATES / BLP
+Rscript 08_gates_inference.R
+Rscript 08_gates_with_yhat.R
+
+# Stage 8: Publication tables (Word doc)
+Rscript 12_expanded_publication_tables.R
 ---
 ```
 clover_hte_biomarkers/
 ├── config/
-│   └── config.R                    <- all paths; edit PROJECT_ROOT once
-├── data/                           <- raw data (gitignored)
+│   └── config.R                    
+├── data/     (in gitignore, not availble on repo)                      
 │   ├── Data/
-│   │   ├── Curated datasets/       <- yw.csv, xvars_egdt.csv, xvars_other.csv
-│   │   └── data/csv/               <- DATASET.csv, DERIVED.csv
-│   └── Share.4.29.26.csv           <- biomarker file (V1+V2+V3)
-├── cate-repo/                      <- Victor's shared CATE toolkit (unchanged)
-├── preprocessing/                  <- stages 0-2 scripts
-├── scripts/                        <- stages 3-6 and post-CATE output scripts
-├── outputs/                        <- each script writes to its own subfolder
+│   │   ├─ Removed on Github
+├── cate-repo/                      
+├── preprocessing/                 
+├── scripts/                       
+├── outputs/                      
 │   ├── 02_build_flat_file/
 │   ├── 03_split_derivation_validation/
 │   ├── 04_impute/
 │   ├── 05_risk_modeling/
 │   ├── 07_cate_modeling/
+│   ├── 07b_cate_modeling_with_risk/
+│   ├── 07c_cate_risk_plus_biomarker/
+│   ├── 08_gates_inference/
+│   ├── 08b_gates_with_yhat/
+│   ├── 10b_confirmatory_with_yhat/
+│   ├── 12_publication_tables/
 │   ├── 09_build_cate_outputs/
 │   ├── 10_confirmatory_analysis/
 │   └── 11_table1/
-├── flowcharts/                     <- Mermaid participant flow diagrams
-├── documents/                      <- eTables builder
-├── relevant_literature/            <- reference PDFs (gitignored)
+├── flowcharts/                    
+├── documents/                      
+├── relevant_literature/            (gitignored)
 └── README.md
 ```
 

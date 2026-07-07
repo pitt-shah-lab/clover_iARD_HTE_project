@@ -7,8 +7,8 @@
 # se.method != "none"), for every method you ran through the CV harness.
 # ============================================================================
 
-source(file.path(dirname(getwd()), "config", "config.R"))
-out_dir <- make_output_subdir("09_build_cate_outputs")
+this_script <- sub("--file=", "", commandArgs(trailingOnly = FALSE)[grep("--file=", commandArgs(trailingOnly = FALSE))])
+source(file.path(dirname(dirname(this_script)), "config", "config.R"))
 
 build_rate_table <- function(post_out_list, method_names,
                              path_csv = file.path(out_dir, "eTable_6_cate_method_comparison.csv")) {
@@ -27,10 +27,3 @@ build_rate_table <- function(post_out_list, method_names,
   cat("Wrote:", path_csv, "\n")
   tab
 }
-
-# ---------------------------------------------------------------------------
-# Example usage:
-# post_out_cf   <- post.cv.fun(cv.obj_cf,   stats = "stats.bin", score = "cate")
-# post_out_bcf  <- post.cv.fun(cv.obj_bcf,  stats = "stats.bin", score = "cate")
-# build_rate_table(list(post_out_cf, post_out_bcf), c("cf.CATE", "bcf.CATE"))
-# ---------------------------------------------------------------------------

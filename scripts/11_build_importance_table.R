@@ -8,7 +8,8 @@
 # fold's [[2]]) before calling this.
 # ============================================================================
 
-source(file.path(dirname(getwd()), "config", "config.R"))
+this_script <- sub("--file=", "", commandArgs(trailingOnly = FALSE)[grep("--file=", commandArgs(trailingOnly = FALSE))])
+source(file.path(dirname(dirname(this_script)), "config", "config.R"))
 out_dir <- make_output_subdir("09_build_cate_outputs")
 
 build_importance_table <- function(importance_list, xvars, method_name,

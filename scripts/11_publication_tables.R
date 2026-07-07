@@ -12,6 +12,7 @@
 #   table1.csv                -- machine-readable
 #   table1_formatted.txt      -- print-formatted for pasting into manuscript
 #   table1_by_cohort.csv      -- full cohort (1563) vs biomarker cohort (1340)
+#add comment
 # ============================================================================
 
 source(file.path((getwd()), "config", "config.R"))
