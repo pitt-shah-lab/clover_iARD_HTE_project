@@ -8,6 +8,8 @@ data/
 
 # Outputs (large, regeneratable, may contain PHI-derived summaries)
 outputs/
+data/
+relevant_literature/
 
 # R / environment
 .Rhistory
